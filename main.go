@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	be "github.com/renantarouco/clio/backend"
+	"github.com/renantarouco/clio/kv"
 )
 
 func main() {
@@ -16,9 +19,9 @@ func main() {
 	command := args[1]
 	commandArgs := args[2:]
 
-	kv := NewKV("./kb.db")
+	fsBackend := be.NewFSBackend("./kv.db")
 
-	err := kv.Load()
+	kv, err := kv.NewKV(fsBackend)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,11 +35,6 @@ func main() {
 		key, value := commandArgs[0], commandArgs[1]
 
 		kv.Set(key, value)
-
-		err := kv.Dump()
-		if err != nil {
-			log.Fatal(err)
-		}
 	case "get":
 		if len(commandArgs) < 1 {
 			log.Fatal("not enough arguments for 'get' command")

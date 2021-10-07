@@ -1,4 +1,4 @@
-package main
+package backend
 
 import (
 	"bufio"
@@ -8,23 +8,21 @@ import (
 	"strings"
 )
 
-type KV struct {
-	data         map[string]string
-	dumpFilename string
+type FSBackend struct {
+	filename string
+	data     map[string]string
 }
 
-func NewKV(dumpFilename string) *KV {
-	return &KV{
-		data: map[string]string{
-			"default": "default",
-		},
-		dumpFilename: dumpFilename,
+func NewFSBackend(filename string) *FSBackend {
+	return &FSBackend{
+		filename: filename,
+		data:     map[string]string{},
 	}
 }
 
-func (keyvalue *KV) Load() error {
+func (be *FSBackend) Load() error {
 	file, err := os.OpenFile(
-		keyvalue.dumpFilename,
+		be.filename,
 		os.O_CREATE|os.O_APPEND|os.O_RDWR,
 		os.ModePerm,
 	)
@@ -53,29 +51,31 @@ func (keyvalue *KV) Load() error {
 
 		key, value := entry[0], entry[1]
 
-		keyvalue.data[key] = value
+		be.data[key] = value
 	}
 
 	return nil
 }
 
-func (keyvalue *KV) Set(key, value string) {
-	keyvalue.data[key] = value
+func (be *FSBackend) Set(key, value string) error {
+	be.data[key] = value
+
+	return be.dump()
 }
 
-func (keyvalue KV) Get(key string) string {
-	value, ok := keyvalue.data[key]
+func (be FSBackend) Get(key string) (string, error) {
+	value, ok := be.data[key]
 
 	if !ok {
-		return ""
+		return "", nil
 	}
 
-	return value
+	return value, nil
 }
 
-func (keyvalue KV) Dump() error {
+func (be FSBackend) dump() error {
 	kvFile, err := os.OpenFile(
-		keyvalue.dumpFilename,
+		be.filename,
 		os.O_CREATE|os.O_RDWR,
 		os.ModePerm,
 	)
@@ -85,7 +85,7 @@ func (keyvalue KV) Dump() error {
 
 	defer kvFile.Close()
 
-	for k, v := range keyvalue.data {
+	for k, v := range be.data {
 		kvFile.WriteString(k + "\t" + v + "\n")
 	}
 
